@@ -1,48 +1,52 @@
-import {missions, dependent, dependentOptions, tests, stages} from './data.js?v=2';
+import {missions as chineseMissions, dependent, dependentOptions, tests, stages} from './data.js?v=4';
+import {englishMissions, englishCommon, ui} from './i18n.js?v=4';
 
 const $ = id => document.getElementById(id);
-const state = {mission:0, stage:0, mode:'challenge', completed:new Set(), setup:{A:'',B:''}, attempts:0, message:''};
+const state = {lang:'en', mission:0, stage:0, mode:'challenge', completed:new Set(), setup:{A:'',B:''}, attempts:0, message:''};
 let world;
-const current = () => missions[state.mission];
+const missions = () => state.lang==='en'?englishMissions:chineseMissions;
+const current = () => missions()[state.mission];
+const common = () => state.lang==='en'?englishCommon:{dependent, dependentOptions, tests, stages};
+const t = (key, values={}) => ui[state.lang][key].replace(/\{(\w+)\}/g,(_,name)=>values[name]??'');
 const condition = id => current().conditions.find(c => c.id === id);
 
 function option(value,label,selected='') { return `<option value="${value}" ${selected===value?'selected':''}>${label}</option>`; }
-function choices(items, name) { return `<option value="">請選擇…</option>${items.map(x=>option(x,x)).join('')}`; }
-function stationSelect(key) { const m=current(); return `<label class="station-select"><span class="station-letter">${key}</span><span class="field-body"><strong>${key} 組的條件</strong><select name="${key}" data-setup="${key}">${option('','請選擇條件…')}${m.conditions.map(c=>option(c.id,c.name,state.setup[key])).join('')}</select></span></label>`; }
-function miniStep() { return `<div class="work-top"><span>第 ${state.mission+1} 項探究</span><strong>${String(state.stage+1).padStart(2,'0')} / 06</strong></div><div class="step-track">${stages.map((s,i)=>`<span class="${i<state.stage?'done':''} ${i===state.stage?'active':''}" title="${s}"></span>`).join('')}</div><p class="step-name">STEP ${String(state.stage+1).padStart(2,'0')} · ${stages[state.stage]}</p>`; }
+function choices(items) { return `<option value="">${t('choose')}</option>${items.map((x,i)=>option(String(i),x)).join('')}`; }
+function stationSelect(key) { const m=current(); return `<label class="station-select"><span class="station-letter">${key}</span><span class="field-body"><strong>${t('groupCondition',{key})}</strong><select name="${key}" data-setup="${key}">${option('',t('chooseCondition'))}${m.conditions.map(c=>option(c.id,c.name,state.setup[key])).join('')}</select></span></label>`; }
+function miniStep() { const items=common().stages; return `<div class="work-top"><span>${t('investigation',{number:state.mission+1})}</span><strong>${String(state.stage+1).padStart(2,'0')} / 06</strong></div><div class="step-track">${items.map((s,i)=>`<span class="${i<state.stage?'done':''} ${i===state.stage?'active':''}" title="${s}"></span>`).join('')}</div><p class="step-name">${t('stepPrefix')} ${String(state.stage+1).padStart(2,'0')} · ${items[state.stage]}</p>`; }
 function feedback() { return state.message ? `<div class="feedback ${state.mode==='cleared'?'correct':'incorrect'}" role="status"><span>${state.mode==='cleared'?'✓':'! '}</span><p>${state.message}</p></div>` : '<div class="feedback-placeholder" aria-hidden="true"></div>'; }
-function actions() { return `<div class="work-actions">${state.mode==='cleared'?`<button class="primary" data-action="next">${state.stage===5?'查看實驗結論':'繼續下一步'} <span aria-hidden="true">→</span></button>`:`<button class="primary" data-action="check">檢查答案 <span aria-hidden="true">→</span></button>`}<span class="attempt-note">${state.mode==='cleared'?'做得好！':state.attempts>0?'可修改答案後再試':'不限時，可重試'}</span></div>`; }
+function actions() { return `<div class="work-actions">${state.mode==='cleared'?`<button class="primary" data-action="next">${t(state.stage===5?'seeConclusion':'continue')} <span aria-hidden="true">→</span></button>`:`<button class="primary" data-action="check">${t('check')} <span aria-hidden="true">→</span></button>`}<span class="attempt-note">${t(state.mode==='cleared'?'wellDone':state.attempts>0?'retryNote':'noTime')}</span></div>`; }
 
 function stageBody() {
   const m=current();
   switch(state.stage) {
-    case 0: return `<h2>用甚麼材料探究<br><em>「${m.title}」？</em></h2><p class="instruction">${m.question} 先選出最關鍵的材料。</p><div class="choice-list">${m.materials.map((x,i)=>`<label class="choice"><input type="radio" name="material" value="${i}"><span class="choice-index">${String.fromCharCode(65+i)}</span><span>${x}</span><span class="choice-indicator"></span></label>`).join('')}</div>`;
-    case 1: return `<h2>安排兩個<br><em>比較條件</em></h2><div class="setup-fields">${stationSelect('A')}${stationSelect('B')}</div>`;
-    case 2: return `<h2>哪一組是<br><em>實驗組？</em></h2><p class="instruction">實驗組移除正在探究的因素；對照組維持正常條件。</p><div class="comparison-recap"><span><b>A</b>${condition(state.setup.A)?.short}</span><span><b>B</b>${condition(state.setup.B)?.short}</span></div><div class="field-grid"><label class="field"><span>實驗組</span><select name="experimental"><option value="">請選擇…</option>${option('A','A 組')}${option('B','B 組')}</select></label><label class="field"><span>對照組</span><select name="control"><option value="">請選擇…</option>${option('A','A 組')}${option('B','B 組')}</select></label></div>`;
-    case 3: return `<h2>讀懂實驗的<br><em>三種變因</em></h2><p class="instruction">獨立變因是刻意改變的；應變變因是觀察的結果；控制變因需保持一致。</p><div class="variable-fields"><label class="field"><span>獨立變因 <small>IV</small></span><select name="iv">${choices(m.ivOptions)}</select></label><label class="field"><span>應變變因 <small>DV</small></span><select name="dv">${choices(dependentOptions)}</select></label><label class="field"><span>控制變因 <small>CV</small></span><select name="cv">${choices(m.cvOptions)}</select></label></div>`;
-    case 4: return `<h2>如何檢測<br><em>有沒有澱粉？</em></h2><p class="instruction">要判斷葉片是否進行光合作用並製造澱粉，應選用哪一個測試？</p><div class="choice-list">${tests.map((x,i)=>`<label class="choice"><input type="radio" name="test" value="${i}"><span class="choice-index">${String.fromCharCode(65+i)}</span><span>${x}</span><span class="choice-indicator"></span></label>`).join('')}</div><p class="note-line"><b>實驗提示</b>測試前，先用熱水及酒精水浴為葉片脫色，沖洗後再滴試劑。</p>`;
-    case 5: return `<h2>預測兩組的<br><em>碘液結果</em></h2><p class="instruction">藍黑色代表有澱粉；黃褐色代表沒有檢測到澱粉。完成後模型會顯示結果。</p><div class="prediction-fields">${['A','B'].map(key=>`<label class="field prediction"><span><b class="small-letter">${key}</b>${condition(state.setup[key])?.short}</span><select name="result${key}"><option value="">請選擇結果…</option>${option('blue','藍黑色（有澱粉）')}${option('brown','黃褐色（沒有檢測到澱粉）')}</select></label>`).join('')}</div>`;
+    case 0: return `<h2>${t('materialHeading',{title:m.title})}</h2><p class="instruction">${t('materialIntro',{question:m.question})}</p><div class="choice-list">${m.materials.map((x,i)=>`<label class="choice"><input type="radio" name="material" value="${i}"><span class="choice-index">${String.fromCharCode(65+i)}</span><span>${x}</span><span class="choice-indicator"></span></label>`).join('')}</div>`;
+    case 1: return `<h2>${t('conditionsHeading')}</h2><div class="setup-fields">${stationSelect('A')}${stationSelect('B')}</div>`;
+    case 2: return `<h2>${t('rolesHeading')}</h2><p class="instruction">${t('rolesIntro')}</p><div class="comparison-recap"><span><b>A</b>${condition(state.setup.A)?.short}</span><span><b>B</b>${condition(state.setup.B)?.short}</span></div><div class="field-grid"><label class="field"><span>${t('experimental')}</span><select name="experimental">${option('',t('choose'))}${option('A',t('group',{key:'A'}))}${option('B',t('group',{key:'B'}))}</select></label><label class="field"><span>${t('control')}</span><select name="control">${option('',t('choose'))}${option('A',t('group',{key:'A'}))}${option('B',t('group',{key:'B'}))}</select></label></div>`;
+    case 3: return `<h2>${t('variablesHeading')}</h2><p class="instruction">${t('variablesIntro')}</p><div class="variable-fields"><label class="field"><span>${t('iv')} <small>IV</small></span><select name="iv">${choices(m.ivOptions)}</select></label><label class="field"><span>${t('dv')} <small>DV</small></span><select name="dv">${choices(common().dependentOptions)}</select></label><label class="field"><span>${t('cv')} <small>CV</small></span><select name="cv">${choices(m.cvOptions)}</select></label></div>`;
+    case 4: return `<h2>${t('testHeading')}</h2><p class="instruction">${t('testIntro')}</p><div class="choice-list">${common().tests.map((x,i)=>`<label class="choice"><input type="radio" name="test" value="${i}"><span class="choice-index">${String.fromCharCode(65+i)}</span><span>${x}</span><span class="choice-indicator"></span></label>`).join('')}</div><p class="note-line"><b>${t('testTip')}</b>${t('testNote')}</p>`;
+    case 5: return `<h2>${t('resultsHeading')}</h2><p class="instruction">${t('resultsIntro')}</p><div class="prediction-fields">${['A','B'].map(key=>`<label class="field prediction"><span><b class="small-letter">${key}</b>${condition(state.setup[key])?.short}</span><select name="result${key}">${option('',t('chooseResult'))}${option('blue',t('blue'))}${option('brown',t('brown'))}</select></label>`).join('')}</div>`;
   }
 }
 
 function summary() {
   const m=current();
-  const exp = state.setup.A==='removed'?'A':'B';
+  const exp = state.setup.A==='normal'?'A':'B';
   const con = exp==='A'?'B':'A';
-  return `<div class="summary-kicker">探究 ${m.number} 完成 <span>✓</span></div><h2>證據指向<br><em>「${m.title}」</em></h2><p class="summary-lead">${m.conclusion}</p><div class="result-table"><div><span>實驗組 · ${exp}</span><strong>黃褐色</strong><small>缺少${m.title} → 沒有檢測到澱粉</small></div><div><span>對照組 · ${con}</span><strong>藍黑色</strong><small>具備${m.title} → 有澱粉</small></div></div><div class="takeaway"><span>科學筆記</span><p>獨立變因：${m.iv}<br>應變變因：${dependent}<br>控制變因：${m.cv}</p></div><div class="work-actions"><button class="primary" data-action="nextMission">${state.completed.size===missions.length?'查看全部成果':'開始下一項探究'} <span aria-hidden="true">→</span></button><button class="text-button" data-action="retry">重做這一關</button></div>`;
+  return `<div class="summary-kicker">${t('completed',{number:m.number})} <span>✓</span></div><h2>${t('evidenceHeading',{title:m.title})}</h2><p class="summary-lead">${m.conclusion}</p><div class="result-table"><div><span>${t('experimental')} · ${exp}</span><strong>${t('blueShort')}</strong><small>${t('presentResult',{title:m.title})}</small></div><div><span>${t('control')} · ${con}</span><strong>${t('brownShort')}</strong><small>${t('absentResult',{title:m.title})}</small></div></div><div class="takeaway"><span>${t('notebook')}</span><p>${t('iv')}: ${m.iv}<br>${t('dv')}: ${common().dependent}<br>${t('cv')}: ${m.cv}</p></div><div class="work-actions"><button class="primary" data-action="nextMission">${t(state.completed.size===missions().length?'allResults':'nextInvestigation')} <span aria-hidden="true">→</span></button><button class="text-button" data-action="retry">${t('redo')}</button></div>`;
 }
 
 function allDone() {
-  return `<div class="summary-kicker">INVESTIGATION COMPLETE <span>✳</span></div><h2>你完成了<br><em>三項探究！</em></h2><p class="summary-lead">你已利用公平測試和碘液結果，找出製造澱粉所需的三個因素。</p><div class="all-list">${missions.map(m=>`<div><span class="all-icon">${m.icon}</span><strong>${m.title}</strong><small>必要因素</small><span class="all-check">✓</span></div>`).join('')}</div><div class="takeaway"><span>記住這個判斷方法</span><p>只改變一個因素 → 保持其他條件相同 → 用碘液測試澱粉 → 比較實驗組與對照組。</p></div><div class="work-actions"><button class="primary" data-action="restart">再玩一次 <span aria-hidden="true">↺</span></button></div>`;
+  return `<div class="summary-kicker">INVESTIGATION COMPLETE <span>✳</span></div><h2>${t('allHeading')}</h2><p class="summary-lead">${t('allLead')}</p><div class="all-list">${missions().map(m=>`<div><span class="all-icon">${m.icon}</span><strong>${m.title}</strong><small>${t('necessary')}</small><span class="all-check">✓</span></div>`).join('')}</div><div class="takeaway"><span>${t('remember')}</span><p>${t('rememberText')}</p></div><div class="work-actions"><button class="primary" data-action="restart">${t('playAgain')} <span aria-hidden="true">↺</span></button></div>`;
 }
 
 function renderNav() {
-  $('missionNav').innerHTML = missions.map((m,i)=>`<button class="mission-tab ${i===state.mission?'current':''} ${state.completed.has(i)?'completed':''}" data-mission="${i}" type="button" ${i===state.mission?'aria-current="step"':''}><span class="tab-num">${m.number}</span><span class="tab-title">${m.title}<small>${m.en}</small></span><span class="tab-symbol">${state.completed.has(i)?'✓':m.icon}</span></button>`).join('');
+  $('missionNav').innerHTML = missions().map((m,i)=>`<button class="mission-tab ${i===state.mission?'current':''} ${state.completed.has(i)?'completed':''}" data-mission="${i}" type="button" ${i===state.mission?'aria-current="step"':''}><span class="tab-num">${m.number}</span><span class="tab-title">${m.title}${state.lang==='zh'?`<small>${m.en}</small>`:''}</span><span class="tab-symbol">${state.completed.has(i)?'✓':m.icon}</span></button>`).join('');
 }
 function renderScene() {
   const m=current();
   const showConditions=state.stage>=1||state.mode==='summary'||state.mode==='all';
-  for(const key of ['A','B']) $('label'+key).textContent=showConditions?(condition(state.setup[key])?.short||'待設定'):'待設定';
+  for(const key of ['A','B']) $('label'+key).textContent=showConditions?(condition(state.setup[key])?.short||t('unset')):t('unset');
   const reveal=state.stage===5&&state.mode==='cleared'||state.mode==='summary'||state.mode==='all';
   const materialReady=state.stage>0||state.mode==='cleared'||state.mode==='summary'||state.mode==='all';
   world?.setExperiment(m.id,showConditions?state.setup:{A:'',B:''},reveal,materialReady);
@@ -51,12 +55,46 @@ function renderScene() {
   $('fallback').dataset.b=showConditions?state.setup.B:'';
   $('fallback').dataset.ready=String(materialReady);
   $('fallback').dataset.reveal=String(reveal);
-  $('sceneNote').textContent='拖動旋轉 · 雙指縮放';
-  $('scene').setAttribute('aria-label',m.id==='carbon'?'同一株植物的兩片葉，答對材料後出現透明膠袋及鈉石灰':'同一株植物上的一塊葉片，答對材料後顯示斑葉或黑紙');
-  $('sceneStep').textContent=state.mode==='summary'?'結果已揭曉':state.mode==='all'?'探究完成':stages[state.stage];
-  $('sceneStatus').textContent=reveal?'葉片碘液結果：藍黑色＝有澱粉；黃褐色＝沒有檢測到澱粉。':state.stage===0?(materialReady?'材料已加入，觀察葉片的變化。':'選對材料後，觀察實驗裝置的變化。'):state.stage===1?'為 A、B 選擇比較條件。':'觀察葉片上 A、B 所指的部分。';
+  $('sceneNote').textContent=t('drag');
+  $('scene').setAttribute('aria-label',t(m.id==='carbon'?'sceneCarbon':'sceneSingle'));
+  $('sceneStep').textContent=state.mode==='summary'?t('sceneRevealed'):state.mode==='all'?t('sceneFinished'):common().stages[state.stage];
+  $('sceneStatus').textContent=reveal?t('sceneResult'):state.stage===0?t(materialReady?'sceneMaterialReady':'sceneMaterialWait'):state.stage===1?t('sceneChoose'):t('sceneObserve');
+}
+function renderStatic() {
+  document.documentElement.lang=state.lang==='en'?'en':'zh-Hant';
+  document.title=t('pageTitle');
+  document.querySelector('meta[name="description"]').content=t('description');
+  $('brand').setAttribute('aria-label',state.lang==='en'?'Return to the first investigation':'回到第一關');
+  $('brandSub').textContent=t('brandSub');
+  $('courseTag').textContent=t('course');
+  $('languageText').textContent=t('language');
+  $('languageSelect').setAttribute('aria-label',t('language'));
+  $('helpText').textContent=t('help');
+  $('introEyebrow').textContent=t('introEyebrow');
+  $('helpEyebrow').textContent=t('helpEyebrow');
+  $('heroTitle').innerHTML=t('hero');
+  $('heroLead').textContent=t('lead');
+  $('statInvestigations').textContent=t('investigations');
+  $('statDecisions').textContent=t('decisions');
+  $('missionNav').setAttribute('aria-label',t('navLabel'));
+  $('sceneCard').setAttribute('aria-label',t('sceneLabel'));
+  $('labText').textContent=t('lab');
+  $('fallback').querySelector('svg').setAttribute('aria-label',t('sceneLabel'));
+  $('diagramText').textContent=t('diagram');
+  $('resetView').setAttribute('aria-label',t('reset'));
+  $('resetText').textContent=t('reset');
+  $('fairTitle').textContent=t('fairTitle');
+  $('fairText').textContent=t('fairText');
+  $('footerText').textContent=t('footer');
+  $('modelNote').textContent=t('modelNote');
+  $('helpTitle').textContent=t('howTitle');
+  $('helpSteps').innerHTML=ui[state.lang].howSteps.map(step=>`<li>${step}</li>`).join('');
+  $('helpEnd').textContent=t('howEnd');
+  $('closeHelp').setAttribute('aria-label',t('close'));
+  $('languageSelect').value=state.lang;
 }
 function render() {
+  renderStatic();
   renderNav();
   $('workCard').innerHTML=state.mode==='all'?allDone():state.mode==='summary'?summary():`${miniStep()}${stageBody()}${feedback()}${actions()}`;
   renderScene();
@@ -85,43 +123,43 @@ function check() {
   switch(state.stage) {
     case 0: {
       const v=selected('material');
-      if(v==='') return incorrect('先選一種材料，再檢查答案。');
-      if(Number(v)!==m.materialAnswer) return incorrect('這件材料不能直接改變本關探究的因素。想想要讓哪個條件「有」和「沒有」。');
+      if(v==='') return incorrect(t('errorMaterialEmpty'));
+      if(Number(v)!==m.materialAnswer) return incorrect(t('errorMaterial'));
       return correct(m.materialWhy);
     }
     case 1: {
       const a=selected('A'),b=selected('B'); state.setup={A:a,B:b};
-      if(!a||!b) return incorrect('A 和 B 都要設定條件，才可以比較。');
-      if(a===b) return incorrect('兩組用了同一條件；公平測試需要一組有受測因素，另一組沒有。');
+      if(!a||!b) return incorrect(t('errorSetupEmpty'));
+      if(a===b) return incorrect(t('errorSetupSame'));
       if(![a,b].includes('normal')||![a,b].includes('removed')) return incorrect(m.setupWrong);
-      return correct('配對正確，兩組比較的是本關探究的因素。');
+      return correct(t('setupCorrect'));
     }
     case 2: {
       const exp=selected('experimental'),con=selected('control');
-      const expected=state.setup.A==='removed'?'A':'B';
-      if(!exp||!con) return incorrect('請指出實驗組和對照組。');
-      if(exp===con) return incorrect('同一組不能同時是實驗組和對照組。');
-      if(exp!==expected) return incorrect(`先找出缺少「${m.title}」的是哪一組；它就是實驗組。`);
+      const expected=state.setup.A==='normal'?'A':'B';
+      if(!exp||!con) return incorrect(t('errorRolesEmpty'));
+      if(exp===con) return incorrect(t('errorRolesSame'));
+      if(exp!==expected) return incorrect(t('errorRoles',{title:m.title}));
       return correct(m.roleWhy);
     }
     case 3: {
       const iv=selected('iv'),dv=selected('dv'),cv=selected('cv');
-      if(!iv||!dv||!cv) return incorrect('請填妥三種變因。');
-      const wrong=[]; if(iv!==m.iv)wrong.push('獨立變因');if(dv!==dependent)wrong.push('應變變因');if(cv!==m.cv)wrong.push('控制變因');
-      if(wrong.length) return incorrect(`再想想：${wrong.join('、')}。獨立變因是刻意改變的；應變變因是量度的結果。`);
-      return correct(`正確：改變「${m.iv}」，觀察葉片有沒有產生澱粉，其他條件保持一致。`);
+      if(!iv||!dv||!cv) return incorrect(t('errorVariablesEmpty'));
+      const wrong=[]; if(iv!=='0')wrong.push(t('iv'));if(dv!=='0')wrong.push(t('dv'));if(cv!=='0')wrong.push(t('cv'));
+      if(wrong.length) return incorrect(t('errorVariables',{names:wrong.join(state.lang==='en'?', ':'、')}));
+      return correct(t('variableCorrect',{iv:m.iv}));
     }
     case 4: {
       const v=selected('test');
-      if(v==='') return incorrect('先選一種測試方法。');
-      if(v!=='0') return incorrect('想一想：要檢測的是澱粉，而不是二氧化碳或還原糖。');
-      return correct('用碘液測試澱粉。先以熱水處理葉片，再以酒精水浴脫色、清水沖洗，最後滴碘液；有澱粉會變藍黑色。');
+      if(v==='') return incorrect(t('errorTestEmpty'));
+      if(v!=='0') return incorrect(t('errorTest'));
+      return correct(t('testCorrect'));
     }
     case 5: {
       const a=selected('resultA'),b=selected('resultB');
-      if(!a||!b) return incorrect('請預測 A、B 兩組的碘液結果。');
-      if(a!==condition(state.setup.A)?.result||b!==condition(state.setup.B)?.result) return incorrect(`有「${m.title}」的部分可製造澱粉，碘液會變藍黑色；缺少它的部分沒有檢測到澱粉。`);
-      return correct('兩組結果不同，為這項探究提供了證據。看看 3D 實驗台上的碘液顏色。');
+      if(!a||!b) return incorrect(t('errorResultsEmpty'));
+      if(a!==condition(state.setup.A)?.result||b!==condition(state.setup.B)?.result) return incorrect(t('errorResults',{title:m.title}));
+      return correct(t('resultsCorrect'));
     }
   }
 }
@@ -136,7 +174,7 @@ $('workCard').addEventListener('click',e=>{
   if(action==='next')next();
   if(action==='retry')startMission(state.mission);
   if(action==='nextMission'){
-    const remaining=missions.findIndex((m,i)=>!state.completed.has(i));
+    const remaining=missions().findIndex((m,i)=>!state.completed.has(i));
     if(remaining<0){state.mode='all';render();}else startMission(remaining);
   }
   if(action==='restart'){state.completed.clear();startMission(0);}
@@ -149,6 +187,12 @@ $('workCard').addEventListener('change',e=>{
   if(state.message&&state.mode==='challenge') { state.message='';$('workCard').querySelector('.feedback')?.remove(); }
 });
 $('missionNav').addEventListener('click',e=>{const b=e.target.closest('[data-mission]');if(b)startMission(Number(b.dataset.mission));});
+$('languageSelect').addEventListener('change',e=>{
+  state.lang=e.target.value;
+  if(state.mode==='cleared') state.message=[current().materialWhy,t('setupCorrect'),current().roleWhy,t('variableCorrect',{iv:current().iv}),t('testCorrect'),t('resultsCorrect')][state.stage];
+  else state.message='';
+  rerenderWithAnswers();
+});
 $('brand').addEventListener('click',e=>{e.preventDefault();startMission(0);});
 $('resetView').addEventListener('click',()=>world?.resetView());
 $('helpButton').addEventListener('click',()=>$('helpDialog').showModal());
@@ -157,7 +201,7 @@ $('helpDialog').addEventListener('click',e=>{if(e.target===$('helpDialog'))$('he
 
 render();
 try {
-  const {LabWorld}=await import('./world.js?v=2');
+  const {LabWorld}=await import('./world.js?v=4');
   world=new LabWorld($('scene'));
   if(!world.available)throw new Error('WebGL unavailable');
   renderScene();

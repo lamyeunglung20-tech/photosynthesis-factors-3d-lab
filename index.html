@@ -1,36 +1,36 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#102d27">
-  <meta name="description" content="互動 3D 光合作用實驗遊戲：探究葉綠素、二氧化碳和光照是否為必要因素。">
-  <title>光合作用探究實驗室 · 3D 遊戲</title>
+  <meta name="description" content="Interactive 3D photosynthesis game: investigate whether chlorophyll, carbon dioxide and light are necessary.">
+  <title>Photosynthesis Investigation Lab · 3D Game</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231a4b3b'/%3E%3Cpath d='M15 46C10 20 33 11 51 12c-1 29-17 40-36 34Z' fill='%23a5d485'/%3E%3Cpath d='M16 46C29 33 36 25 50 14' stroke='%23eaf5c6' stroke-width='3' fill='none'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=2">
-  <script type="module" src="app.js?v=2"></script>
+  <link rel="stylesheet" href="style.css?v=4">
+  <script type="module" src="app.js?v=4"></script>
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#" id="brand" aria-label="回到第一關"><span class="brand-icon">✳</span><span><strong>LEAF LAB</strong><small>光合作用探究實驗室</small></span></a>
-    <div class="top-actions"><span class="course-tag">生物科 · 科學探究</span><button id="helpButton" class="top-button" type="button">玩法說明 <span aria-hidden="true">↗</span></button></div>
+    <a class="brand" href="#" id="brand" aria-label="Return to the first investigation"><span class="brand-icon">✳</span><span><strong>LEAF LAB</strong><small id="brandSub">Photosynthesis Investigation Lab</small></span></a>
+    <div class="top-actions"><span class="course-tag" id="courseTag">Biology · Scientific investigation</span><label class="language-picker"><span class="visually-hidden" id="languageText">Language</span><select id="languageSelect" aria-label="Language"><option value="en" selected>English</option><option value="zh">中文</option></select></label><button id="helpButton" class="top-button" type="button"><span id="helpText">How to play</span> <span aria-hidden="true">↗</span></button></div>
   </header>
 
   <main>
     <section class="intro">
-      <div><p class="eyebrow"><span class="eyebrow-line"></span> INVESTIGATION / 01—03</p><h1>植物需要甚麼<br><em>才能製造澱粉？</em></h1><p class="lead">設計公平測試，親眼比較不同條件下的葉片，再用碘液找出證據。</p></div>
-      <div class="intro-stats"><span>3 <small>項探究</small></span><span>6 <small>個決策 × 每關</small></span></div>
+      <div><p class="eyebrow"><span class="eyebrow-line"></span><span id="introEyebrow">INVESTIGATION / 01—03</span></p><h1 id="heroTitle">What does a plant need<br><em>to make starch?</em></h1><p class="lead" id="heroLead">Design a fair test, compare leaf areas under different conditions, and use iodine to find the evidence.</p></div>
+      <div class="intro-stats"><span>3 <small id="statInvestigations">investigations</small></span><span>6 <small id="statDecisions">decisions per investigation</small></span></div>
     </section>
 
-    <nav class="mission-nav" id="missionNav" aria-label="選擇探究關卡"></nav>
+    <nav class="mission-nav" id="missionNav" aria-label="Choose an investigation"></nav>
 
     <div class="main-grid">
-      <section class="scene-card" aria-label="互動式立體實驗模型">
-        <div class="scene-header"><div><span class="live-dot"></span><span>3D 實驗台</span></div><span class="scene-step" id="sceneStep">準備實驗</span></div>
+      <section class="scene-card" id="sceneCard" aria-label="Interactive 3D experiment model">
+        <div class="scene-header"><div><span class="live-dot"></span><span id="labText">3D experiment bench</span></div><span class="scene-step" id="sceneStep">Prepare the experiment</span></div>
         <div class="scene-wrap">
-          <canvas id="scene" aria-label="可旋轉的同一株植物模型" role="img"></canvas>
+          <canvas id="scene" aria-label="Rotatable model of one plant" role="img"></canvas>
           <div id="fallback" class="fallback" hidden>
-            <svg viewBox="0 0 600 440" role="img" aria-label="同一株植物的實驗示意圖">
+            <svg viewBox="0 0 600 440" role="img" aria-label="Interactive 3D experiment model">
               <ellipse cx="300" cy="392" rx="200" ry="17" fill="#d2dfc9"/>
               <path d="M261 323h78l-12 67h-54Z" fill="#bc865f"/><ellipse cx="300" cy="323" rx="39" ry="9" fill="#725239"/>
               <g class="fallback-single"><path d="M300 323Q285 242 163 228" stroke="#5e874c" stroke-width="9" fill="none"/>
@@ -45,21 +45,21 @@
                 <path class="carbon-right" d="M349 160C410 102 480 127 513 158c-57 56-114 52-164 2Z" fill="#5d9f58"/>
                 <g class="bag-pair" fill="#d0e9e1" fill-opacity=".2" stroke="#89b4a7" stroke-width="2"><rect x="72" y="104" width="189" height="169" rx="9"/><rect x="337" y="80" width="190" height="169" rx="9"/><path d="M76 113h180m85-24h180"/><g fill="#fff" fill-opacity="1"><circle cx="484" cy="228" r="6"/><circle cx="473" cy="233" r="6"/><circle cx="496" cy="233" r="6"/></g></g>
               </g>
-            </svg><p>平面示意圖</p>
+            </svg><p id="diagramText">2D diagram</p>
           </div>
-          <div class="station-labels"><div class="station-label"><b>A</b><span id="labelA">待設定</span></div><div class="station-label"><b>B</b><span id="labelB">待設定</span></div></div>
-          <div class="scene-note" id="sceneNote">拖動模型可轉動視角</div>
+          <div class="station-labels"><div class="station-label"><b>A</b><span id="labelA">Not set</span></div><div class="station-label"><b>B</b><span id="labelB">Not set</span></div></div>
+          <div class="scene-note" id="sceneNote">Drag to rotate · pinch to zoom</div>
         </div>
-        <div class="scene-footer"><span id="sceneStatus">先找出操縱因素的關鍵材料。</span><button id="resetView" type="button" aria-label="重設 3D 視角">↺ <span>重設視角</span></button></div>
+        <div class="scene-footer"><span id="sceneStatus">Choose the correct material to change the set-up.</span><button id="resetView" type="button" aria-label="Reset 3D view">↺ <span id="resetText">Reset 3D view</span></button></div>
       </section>
 
       <section class="work-card" id="workCard" aria-live="polite"></section>
     </div>
 
-    <section class="logic-strip"><span class="logic-icon">?</span><div><strong>公平測試的核心</strong><p>每次只改變一個因素；其餘條件盡量保持一致。觀察結果才能支持你的結論。</p></div></section>
+    <section class="logic-strip"><span class="logic-icon">?</span><div><strong id="fairTitle">The key to a fair test</strong><p id="fairText">Change only one factor at a time. Keep the other conditions as similar as possible so the results can support your conclusion.</p></div></section>
   </main>
 
-  <footer class="footer"><span>LEAF LAB · 3D 實驗設計練習</span><span>模型及碘液顏色為教學示意</span></footer>
-  <dialog id="helpDialog"><div class="dialog-head"><span class="eyebrow">HOW TO PLAY</span><button id="closeHelp" type="button" aria-label="關閉">×</button></div><h2>像科學家一樣思考</h2><ol><li>找出改變指定因素所需的材料。</li><li>安排 A、B 兩個比較條件，並辨認實驗組和對照組。</li><li>判斷獨立、應變和控制變因。</li><li>選出檢測澱粉的方法，預測碘液顏色。</li></ol><p>答錯可再試；每個選擇都會得到解釋。模型可拖動旋轉。</p></dialog>
+  <footer class="footer"><span id="footerText">LEAF LAB · 3D experiment design practice</span><span id="modelNote">Model and iodine colours are teaching illustrations</span></footer>
+  <dialog id="helpDialog"><div class="dialog-head"><span class="eyebrow" id="helpEyebrow">HOW TO PLAY</span><button id="closeHelp" type="button" aria-label="Close">×</button></div><h2 id="helpTitle">Think like a scientist</h2><ol id="helpSteps"><li>Choose the material that changes the factor under investigation.</li><li>Set up conditions A and B; identify the experimental set-up and control.</li><li>Identify the independent, dependent and controlled variables.</li><li>Choose the starch test and predict the iodine colours.</li></ol><p id="helpEnd">You can try again after an incorrect answer. Rotate the 3D model by dragging.</p></dialog>
 </body>
 </html>
